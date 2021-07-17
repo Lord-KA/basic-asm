@@ -7,7 +7,7 @@ all: run
 	nasm -g -felf64 $< -o $@
 
 .c.o:
-	gcc -g -c $< -o $@ -no-pie
+	gcc -g -c -fno-stack-protector $< -o $@ -no-pie
 
 run: outp.o main_outp.o
 	ld $^ -o $@

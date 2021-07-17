@@ -2,8 +2,10 @@ section .text
 
 global _start
 global gwrite
+global gstrlen
+global gflush
 extern main
-IO_BUF_SIZE equ 10
+IO_BUF_SIZE equ 256
 
 _start:
     push rbp
@@ -25,6 +27,9 @@ _start:
 ; void gwrite( cosnt char*, size_t )
 gwrite:
     push rbp
+    cmp rsi, 0x0
+    jle gwrite_end
+
     cmp [balance], rsi
     jle .write_buf
     
@@ -69,6 +74,35 @@ gwrite:
         ret
         
   
+; size_t rax gstrlen( char* rdi )
+gstrlen:
+    mov rax, rdi
+    .loop:
+        mov cl, [rax]
+        test cl, cl
+        jz .gstrlen_end
+        inc rax
+        jmp .loop
+
+
+    .gstrlen_end:
+        sub rax, rdi
+        ret
+
+; void gflush( void ) 
+gflush:
+    push rbp
+
+    mov rsi, buf
+    mov rdx, IO_BUF_SIZE
+    sub rdx, [balance]
+    mov rdi, 1
+    mov rax, 1
+    syscall
+
+    pop rbp
+    ret
+   
 
 
 
@@ -84,4 +118,4 @@ buf:
     times IO_BUF_SIZE db 0x0 
 buf_end:
 balance:
-    db IO_BUF_SIZE
+    dq IO_BUF_SIZE
