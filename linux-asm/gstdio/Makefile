@@ -9,7 +9,7 @@ all: run
 .c.o:
 	gcc -g -c -fno-stack-protector $< -o $@ -no-pie
 
-run: outp.o main_outp.o
+run: gstdio.o main.o
 	ld $^ -o $@
 
 clean:
