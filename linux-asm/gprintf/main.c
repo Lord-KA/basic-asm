@@ -19,7 +19,8 @@ int main()
     // gwrite(third, gstrlen(third));
     // gwrite(end, gstrlen(end));
     
-    gprintf("abc");
+    gprintf("abc\n");
+    gprintf("%c", 'q');
 
     return 0;
 }

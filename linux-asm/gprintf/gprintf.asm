@@ -31,7 +31,9 @@ extern main
     jne .macro_end %+ gputchar_no
     
     push rcx
+    push r11
     call gflush
+    pop r11
     pop rcx
 
     .macro_end %+ gputchar_no:
@@ -47,6 +49,7 @@ _start:
     push rbp
 
     call main
+
     ; mov r10, 0x1
     ; lw r10,jtable
     ; jalr r10
@@ -55,6 +58,7 @@ _start:
     ; gputchar 'b'
     ; gputchar 'c'
     ; gputchar 'd'
+
     call gflush
  
     pop rbp
@@ -69,15 +73,16 @@ _start:
 ; void gprintf( char* rdi, ... ) TODO 
 gprintf: 
     mov r10, print_c
-    mov [jtable + 'c'], r10    ; preping jump table
+    lea r9, [jtable + 'c']
+    mov [jtable + 'c' ], r10    ; preping jump table
 
     mov r10, print_d
-    mov [jtable + 'd'], r10
+    mov [jtable + 'd' ], r10
 
     mov r10, print_s
     mov [jtable + 's'], r10
 
-    pop r11        ; WARNING r11 has to stay preserved (stores ret adress)
+    pop r12        ; WARNING r12 has to stay preserved (stores ret adress) ; TODO save r12 for calling func
 
     push r9        ; getting all other input parameters into stack  ; TODO rewrite without push 
     push r8
@@ -85,7 +90,8 @@ gprintf:
     push rdx
     push rsi
 
-    xor rcx, rcx        ; counter
+    xor rcx, rcx        ; counter on rdi chars
+    xor r11, r11        ; counter of used input parameters 
     loop:
         mov dl, [rdi + rcx]         ; WARNING strings with "%" at the end are unsupported (for now)
         cmp dl, 0x0
@@ -95,20 +101,21 @@ gprintf:
         jne .text_only
 
         inc rcx 
+        inc r11
         mov dl, [rdi + rcx]
 
-        xor r8, r8
-        test rcx, 1
-        mov r9, 8
-        cmove r8, r9        ; check if cmovE or cmovNE
+        ; xor r8, r8
+        ; test rcx, 1
+        ; mov r10, 8
+        ; cmovne r8, r10        ; check if cmovE or cmovNE
 
-        add rsp, r8
+        ; add rsp, r8
 
-        mov r8, rdx
-        add r8, jtable
-        jmp r8
+        lea r10, [rdx + jtable]
+        mov r10, [r10]
+        jmp r10
 
-        sub rsp, r8
+        ; sub rsp, r8
 
 
         .text_only:
@@ -121,19 +128,22 @@ gprintf:
         
        loop_end:
 
-    
-
-    call gflush
-    pop rbp
+      
     push r11
+    call gflush
+    pop r11
+
+    mov rcx, 0x5
+    sub rcx, r11
+    lea rcx, [rcx * 8]
+    add rsp, rcx
+
+    push r12
     ret
 
 
 ;=================================================
 ; jump table to gprint different data types 
-
-jtable:
-    times 0x100 db 0x0
 
 print_c:
     pop rcx
@@ -263,6 +273,9 @@ gflush:
 
 
 section .data
+
+jtable:
+    times 0x100 db 0x0
 
 buf:
     times IO_BUF_SIZE db 0x0 
