@@ -6,7 +6,9 @@ global gstrlen
 global gflush
 global gprintf
 
-IO_BUF_SIZE equ 0xa
+IO_BUF_SIZE equ 0x10
+
+extern main
 
 
 ;=================================================
@@ -15,10 +17,10 @@ IO_BUF_SIZE equ 0xa
 %assign gputchar_no 0x0
 
 %macro gputchar 1
-    mov cl, %1
+    mov dl, %1
     mov r10, IO_BUF_SIZE
     sub r10, [balance]
-    mov [buf + r10], cl
+    mov [buf + r10], dl
 
     mov r10, [balance]
     dec r10
@@ -28,7 +30,9 @@ IO_BUF_SIZE equ 0xa
     cmp [balance], r10
     jne .macro_end %+ gputchar_no
     
+    push rcx
     call gflush
+    pop rcx
 
     .macro_end %+ gputchar_no:
 
@@ -42,16 +46,20 @@ _start:
 
     push rbp
 
-    ; call main
-    mov r10, 0x1
-    lw r10,jtable
-    jalr r10
+    call main
+    ; mov r10, 0x1
+    ; lw r10,jtable
+    ; jalr r10
 
+    ; gputchar 'a'
+    ; gputchar 'b'
+    ; gputchar 'c'
+    ; gputchar 'd'
     call gflush
  
-   
     pop rbp
 
+    xor rax, rax
     mov rdi, rax
     mov rax, 60
     syscall
@@ -60,13 +68,16 @@ _start:
 ;=================================================
 ; void gprintf( char* rdi, ... ) TODO 
 gprintf: 
-    mov [jtable + 'c' ], print_c    ; preping jump table
-    mov [jtable + 'd' ], print_d
-    mov [jtable + 's' ], print_s
+    mov r10, print_c
+    mov [jtable + 'c'], r10    ; preping jump table
 
+    mov r10, print_d
+    mov [jtable + 'd'], r10
+
+    mov r10, print_s
+    mov [jtable + 's'], r10
 
     pop r11        ; WARNING r11 has to stay preserved (stores ret adress)
-    push rbp
 
     push r9        ; getting all other input parameters into stack  ; TODO rewrite without push 
     push r8
@@ -74,41 +85,45 @@ gprintf:
     push rdx
     push rsi
 
-    xor rcx, rcx
-    .loop:
-        mov cl, [rdi + rcx]         ; WARNING strings with "%" at the end are unsupported (for now)
-        cmp cl, 0x0
-        je .loop_end
+    xor rcx, rcx        ; counter
+    loop:
+        mov dl, [rdi + rcx]         ; WARNING strings with "%" at the end are unsupported (for now)
+        cmp dl, 0x0
+        je loop_end
         
-        cmp cl, '%'
+        cmp dl, '%'
         jne .text_only
 
         inc rcx 
-        mov cl, [rdi + rcx]
+        mov dl, [rdi + rcx]
 
         xor r8, r8
         test rcx, 1
-        cmove r8, 8        ; check if cmovE or cmovNE
+        mov r9, 8
+        cmove r8, r9        ; check if cmovE or cmovNE
 
         add rsp, r8
 
-        jmp [cl + jtable]
+        mov r8, rdx
+        add r8, jtable
+        jmp r8
 
-        dec rsp, r8
+        sub rsp, r8
 
 
         .text_only:
-            gputchar cl
+            gputchar dl
     
         continue:
         
         inc rcx
+        jmp loop
         
-       .loop_end:
+       loop_end:
 
     
 
-
+    call gflush
     pop rbp
     push r11
     ret
@@ -121,7 +136,7 @@ jtable:
     times 0x100 db 0x0
 
 print_c:
-    pop cl
+    pop rcx
     gputchar cl
     jmp continue
 
@@ -134,9 +149,10 @@ print_d:
 
         xor rdx, rdx    ; getting % 10 of r9
         mov rax, r9
-        div 0xa
+        mov rcx, 0xa
+        div rcx
         mov r9, rax
-        mov cl, rdx
+        mov rcx, rdx
         add cl, '0'
         gputchar cl
 
@@ -172,11 +188,11 @@ gwrite:
     jle .write_buf
     
     mov rcx, rsi
-    mov r11, buf + IO_BUF_SIZE
-    sub r11, [balance]
+    mov r8, buf + IO_BUF_SIZE
+    sub r8, [balance]
     .loop:
         mov dl, [rdi + rcx - 1]
-        mov [r11 + rcx - 1], dl
+        mov [r8 + rcx - 1], dl
         loop .loop
     sub [balance], rsi
     jmp gwrite_end
@@ -201,8 +217,8 @@ gwrite:
         mov rax, 1
         syscall
 
-        mov r11, IO_BUF_SIZE
-        mov [balance], r11
+        mov r8, IO_BUF_SIZE
+        mov [balance], r8
 
  
 
