@@ -6,7 +6,7 @@ global gstrlen
 global gflush
 global gprintf
 
-IO_BUF_SIZE equ 0x10
+IO_BUF_SIZE equ 0x100
 
 extern main
 
@@ -30,11 +30,13 @@ extern main
     cmp [balance], r10
     jne .macro_end %+ gputchar_no
     
+    push rdi
     push rcx
     push r11
     call gflush
     pop r11
     pop rcx
+    pop rdi
 
     .macro_end %+ gputchar_no:
 
@@ -72,16 +74,6 @@ _start:
 ;=================================================
 ; void gprintf( char* rdi, ... ) TODO 
 gprintf: 
-    mov r10, print_c
-    lea r9, [jtable + 'c']
-    mov [jtable + 'c' ], r10    ; preping jump table
-
-    mov r10, print_d
-    mov [jtable + 'd' ], r10
-
-    mov r10, print_s
-    mov [jtable + 's'], r10
-
     pop r12        ; WARNING r12 has to stay preserved (stores ret adress) ; TODO save r12 for calling func
 
     push r9        ; getting all other input parameters into stack  ; TODO rewrite without push 
@@ -90,6 +82,7 @@ gprintf:
     push rdx
     push rsi
 
+    xor rdx, rdx
     xor rcx, rcx        ; counter on rdi chars
     xor r11, r11        ; counter of used input parameters 
     loop:
@@ -104,14 +97,14 @@ gprintf:
         inc r11
         mov dl, [rdi + rcx]
 
-        ; xor r8, r8
+        ; xor r8, r
         ; test rcx, 1
         ; mov r10, 8
         ; cmovne r8, r10        ; check if cmovE or cmovNE
 
         ; add rsp, r8
 
-        lea r10, [rdx + jtable]
+        lea r10, [(rdx - 'a') * 8 + jtable]
         mov r10, [r10]
         jmp r10
 
@@ -145,14 +138,17 @@ gprintf:
 ;=================================================
 ; jump table to gprint different data types 
 
-print_c:
-    pop rcx
-    gputchar cl
+print_bin:
+    ; TODO
+
+print_char:
+    pop rdx
+    gputchar dl
     jmp continue
 
-
-print_d:
+print_dec:
     pop r9
+    push rcx
     .loop:
         test r9, r9
         je .loop_end
@@ -164,27 +160,41 @@ print_d:
         mov r9, rax
         mov rcx, rdx
         add cl, '0'
+
+        push r9
         gputchar cl
+        pop r9
+
+        jmp .loop
 
         .loop_end:
 
+    pop rcx
     jmp continue
 
+print_oct:
+    ; TODO
 
-print_s:
+print_string:
     pop r9
     .loop:
-        mov cl, [r9]
-        test cl, cl    ; if [r9] == 0x0
+        mov dl, [r9]
+        test dl, dl    ; if [r9] == 0x0
         je .loop_end
          
-        gputchar cl
-        add r9, 8
+        push r9
+        gputchar dl
+        pop r9
 
+        inc r9
+        
+        jmp .loop
         .loop_end:
     
     jmp continue
 
+print_hex:
+    ; TODO
 
 
 ;=================================================
@@ -275,7 +285,16 @@ gflush:
 section .data
 
 jtable:
-    times 0x100 db 0x0
+    times (8 * ('b' - 'a')) db 0xff ; 7 -- length of call .. and jmp ...
+        dq print_bin
+        dq print_char
+        dq print_dec
+    times (8 * ('o' - 'd' - 1)) db 0xff
+        dq print_oct
+    times (8 * ('s' - 'o' - 1)) db 0xff
+        dq print_string
+    times (8 * ('x' - 's' - 1)) db 0xff
+        dq print_hex
 
 buf:
     times IO_BUF_SIZE db 0x0 
