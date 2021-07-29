@@ -8,6 +8,7 @@ global gprintf
 
 IO_BUF_SIZE equ 0x100
 UINT64_MAX_LEN equ 20
+UINT64_MAX_BIN equ 0b1000000000000000000000000000000000000000000000000000000000000000
 
 extern main
 
@@ -140,7 +141,59 @@ gprintf:
 ; jump table to gprint different data types 
 
 print_bin:
-    ; TODO
+    pop rdx
+    push rbx
+    push rcx
+    push r10
+    push r9
+
+    xor rbx, rbx
+    xor r9, r9
+    mov bl, '1'
+    .loop:
+        test rdx, rdx
+        je .loop_end
+            
+        mov r10, UINT64_MAX_BIN
+        and r10, rdx
+        xor rcx, rcx
+        mov cl, '0'
+        test r10, r10
+        je .zero_case
+
+        .one_case:
+            mov cl, '1'
+            mov r9, 0x1 
+            jmp .if_end
+
+        .zero_case:
+            test r9, r9
+            je .continue
+
+            mov cl, '0'
+
+        .if_end:
+
+
+        push rdx
+        push r10
+
+        gputchar cl
+    
+        pop r10
+        pop rdx
+
+        .continue:
+
+        shl rdx, 0x1
+        jmp .loop
+        .loop_end:
+
+    pop r9
+    pop r10
+    pop rcx
+    push rbx
+    jmp continue
 
 print_char:
     pop rdx
@@ -155,49 +208,37 @@ print_dec:
     push r11
     
     mov r8, r9
-    mov r10, 0x1
+    mov r10, UINT64_MAX_LEN
     .loop_1:
         test r8, r8
         je .loop_1_end
         
-        xor rdx, rdx ; r8 //= 10
+        dec r10
+        
+        xor rdx, rdx
         mov rax, r8
         mov rcx, 0xa
         div rcx
-        mov r8, rax
 
-        imul r10, 0xa
+        mov r8, rax
+        add dl, '0'
+        mov [dec_buf + r10], dl
 
         jmp .loop_1
         .loop_1_end:
 
 
     .loop_2:
-        test r9, r9
+        cmp r10, UINT64_MAX_LEN
         je .loop_2_end
-         
-        mov rdx, rdx ; r10 /= 10
-        mov rax, r10
-        mov rcx, 0xa
-        idiv rcx
-        mov r10, rax
         
-        xor rdx, rdx ; rdx = r9 / r10
-        mov rax, r9
-        mov rcx, r11
-        div rcx
-        mov rdx, rax
+        mov dl, [dec_buf + r10]
 
-        push rdx
-        push r9
         push r10
         gputchar dl
         pop r10
-        pop r9
-        pop rdx
-        
-        imul rdx, r10
-        sub r9, rdx
+
+        inc r10
 
         jmp .loop_2
         .loop_2_end:
