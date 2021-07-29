@@ -20,10 +20,10 @@ int main()
     // gwrite(third, gstrlen(third));
     // gwrite(end, gstrlen(end));
     
-    int a = 284, b = 123, c = 999, d = 1923;
+    int a = 284, b = 12345, c = 999, d = 1923;
 
-    // gprintf("%s%d", first, a);
-    gprintf("%s No. %d asfsd %s%d ad %d%d%s%s sdfj\n", first, a, second, b, c, d, third, end);
+    gprintf("%d", b);
+    // gprintf("%s No. %d asfsd %s%d ad %d%d%s%s sdfj\n", first, a, second, b, c, d, third, end);
     // printf("%s No. %d asfsd %s%d ad %d%d%s%s sdfj\n", first, a, second, b, c, d, third, end);
     
     //gprintf("This is an int: %d \n", a);
