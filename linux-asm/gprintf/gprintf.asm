@@ -9,6 +9,8 @@ global gprintf
 IO_BUF_SIZE equ 0x100
 UINT64_MAX_LEN equ 20
 UINT64_MAX_BIN equ 0b1000000000000000000000000000000000000000000000000000000000000000
+UINT64_MAX_OCT equ 0b1110000000000000000000000000000000000000000000000000000000000000
+UINT64_MAX_HEX equ 0b1111000000000000000000000000000000000000000000000000000000000000
 
 extern main
 
@@ -74,7 +76,8 @@ _start:
 
 
 ;=================================================
-; void gprintf( char* rdi, ... ) TODO 
+; void gprintf( char* rdi, ... ) 
+
 gprintf: 
     pop r12        ; WARNING r12 has to stay preserved (stores ret adress) ; TODO save r12 for calling func
 
@@ -99,14 +102,14 @@ gprintf:
         inc r11
         mov dl, [rdi + rcx]
 
-        ; xor r8, r
+        ; xor r8, r             ; TODO figure out if stack correction is needed
         ; test rcx, 1
         ; mov r10, 8
         ; cmovne r8, r10        ; check if cmovE or cmovNE
 
         ; add rsp, r8
 
-        lea r10, [(rdx - 'a') * 8 + jtable]
+        lea r10, [(rdx - '%') * 8 + jtable]
         mov r10, [r10]
         jmp r10
 
@@ -176,11 +179,9 @@ print_bin:
 
 
         push rdx
-        push r10
 
         gputchar cl
     
-        pop r10
         pop rdx
 
         .continue:
@@ -252,7 +253,64 @@ print_dec:
     jmp continue
 
 print_oct:
-    ; TODO
+    pop rdx
+    push rcx
+    push r10
+    push r9
+
+    xor r9, r9
+
+    mov r10, UINT64_MAX_BIN
+    and r10, rdx
+    shl rdx, 0x1
+
+    test r10, r10
+    je .loop
+    gputchar '1'
+    mov r9, 1
+
+    .loop:
+        test rdx, rdx
+        je .loop_end
+            
+        mov r10, UINT64_MAX_OCT
+        and r10, rdx
+        shr r10, 0x3d
+        xor rcx, rcx
+        mov cl, '0'
+        test r10, r10
+        je .zero_case
+
+        .one_case:
+            mov cl, [hex_table + r10]
+            mov r9, 0x1 
+            jmp .if_end
+
+        .zero_case:
+            test r9, r9
+            je .continue
+
+            mov cl, '0'
+
+        .if_end:
+
+
+        push rdx
+
+        gputchar cl
+    
+        pop rdx
+
+        .continue:
+
+        shl rdx, 0x3
+        jmp .loop
+        .loop_end:
+
+    pop r9
+    pop r10
+    pop rcx
+    jmp continue
 
 print_string:
     pop r9
@@ -273,7 +331,58 @@ print_string:
     jmp continue
 
 print_hex:
-    ; TODO
+    pop rdx
+    push rcx
+    push r10
+    push r9
+
+    xor r9, r9
+    .loop:
+        test rdx, rdx
+        je .loop_end
+            
+        mov r10, UINT64_MAX_HEX
+        and r10, rdx
+        shr r10, 0x3c
+        xor rcx, rcx
+        mov cl, '0'
+        test r10, r10
+        je .zero_case
+
+        .one_case:
+            mov cl, [hex_table + r10]
+            mov r9, 0x1 
+            jmp .if_end
+
+        .zero_case:
+            test r9, r9
+            je .continue
+
+            mov cl, '0'
+
+        .if_end:
+
+
+        push rdx
+
+        gputchar cl
+    
+        pop rdx
+
+        .continue:
+
+        shl rdx, 0x4
+        jmp .loop
+        .loop_end:
+
+    pop r9
+    pop r10
+    pop rcx
+    jmp continue
+
+print_percent:
+    gputchar '%'
+    jmp continue
 
 
 ;=================================================
@@ -364,7 +473,8 @@ gflush:
 section .data
 
 jtable:
-    times (8 * ('b' - 'a')) db 0xff ; 7 -- length of call .. and jmp ...
+    dq print_percent
+    times (8 * ('b' - '%' - 1)) db 0xff
         dq print_bin
         dq print_char
         dq print_dec
@@ -384,6 +494,8 @@ balance:
 dec_buf:
     times UINT64_MAX_LEN db 0x0
 
+hex_table:
+    db "0123456789abcdef"
 
 
 

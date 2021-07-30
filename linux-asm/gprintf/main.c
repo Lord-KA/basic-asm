@@ -23,13 +23,13 @@ int main()
     int a = 255, b = 12345, c = 999, d = 1923;
 
     
-    gprintf("%b %b %b %b\n", a, b, c, d);
+    gprintf("%o %o %o %o\n", a, b, c, d);
     
-    /*
+    // /*
     // gprintf("%s No. %d asfsd %s%d ad %d%d%s%s sdfj\n", first, a, second, b, c, d, third, end);
     //printf("%s No. %d asfsd %s%d ad %d%d%s%s sdfj\n", first, a, second, b, c, d, third, end);
-    gprintf("I %s %d %d%c%b\n",
-            "love", 3802, 100, 33, 255);
+    gprintf("I %s %x %d%%%c%o\n",
+            "love", 3802, 100, 33, 299593);
     
     gprintf("Many args test:\n"
             "  1: %d\n"
@@ -46,7 +46,7 @@ int main()
             "365: %d\n",
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 365);
     // gprintf("This is an int: %d \n", a);
-    */
+    // */
     return 0;
 }
 
