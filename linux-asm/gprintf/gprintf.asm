@@ -8,9 +8,9 @@ global gprintf
 
 IO_BUF_SIZE equ 0x100
 UINT64_MAX_LEN equ 20
-UINT64_MAX_BIN equ 0b1000000000000000000000000000000000000000000000000000000000000000
-UINT64_MAX_OCT equ 0b1110000000000000000000000000000000000000000000000000000000000000
-UINT64_MAX_HEX equ 0b1111000000000000000000000000000000000000000000000000000000000000
+UINT64_BIN_MASK equ 0b1000000000000000000000000000000000000000000000000000000000000000 
+UINT64_OCT_MASK equ 0b1110000000000000000000000000000000000000000000000000000000000000
+UINT64_HEX_MASK equ 0b1111000000000000000000000000000000000000000000000000000000000000
 
 extern main
 
@@ -50,6 +50,7 @@ extern main
 
 
 ;=================================================
+
 _start:
 
     push rbp
@@ -76,12 +77,13 @@ _start:
 
 
 ;=================================================
+
 ; void gprintf( char* rdi, ... ) 
-
 gprintf: 
-    pop r12        ; WARNING r12 has to stay preserved (stores ret adress) ; TODO save r12 for calling func
+    pop r10
+    mov [gprintf_ret], r10  ; WARNING [gprintf_ret] has to stay preserved (stores ret adress) 
 
-    push r9        ; getting all other input parameters into stack  ; TODO rewrite without push 
+    push r9        ; getting all other input parameters into stack  
     push r8
     push rcx
     push rdx
@@ -136,7 +138,8 @@ gprintf:
     lea rcx, [rcx * 8]
     add rsp, rcx
 
-    push r12
+    mov r10, [gprintf_ret]
+    push r10
     ret
 
 
@@ -157,7 +160,7 @@ print_bin:
         test rdx, rdx
         je .loop_end
             
-        mov r10, UINT64_MAX_BIN
+        mov r10, UINT64_BIN_MASK
         and r10, rdx
         xor rcx, rcx
         mov cl, '0'
@@ -260,7 +263,7 @@ print_oct:
 
     xor r9, r9
 
-    mov r10, UINT64_MAX_BIN
+    mov r10, UINT64_BIN_MASK
     and r10, rdx
     shl rdx, 0x1
 
@@ -273,7 +276,7 @@ print_oct:
         test rdx, rdx
         je .loop_end
             
-        mov r10, UINT64_MAX_OCT
+        mov r10, UINT64_OCT_MASK
         and r10, rdx
         shr r10, 0x3d
         xor rcx, rcx
@@ -341,7 +344,7 @@ print_hex:
         test rdx, rdx
         je .loop_end
             
-        mov r10, UINT64_MAX_HEX
+        mov r10, UINT64_HEX_MASK
         and r10, rdx
         shr r10, 0x3c
         xor rcx, rcx
@@ -386,6 +389,7 @@ print_percent:
 
 
 ;=================================================
+
 ; void gwrite( cosnt char*, size_t )
 gwrite:
     push rbp
@@ -426,10 +430,7 @@ gwrite:
         syscall
 
         mov r8, IO_BUF_SIZE
-        mov [balance], r8
-
- 
-
+        mov [balance], r8 
 
     gwrite_end:
         pop rbp
@@ -451,6 +452,7 @@ gstrlen:
         sub rax, rdi
         ret
 
+
 ; void gflush( void ) 
 gflush:
     push rbp
@@ -469,6 +471,7 @@ gflush:
     ret
    
 
+;=================================================
 
 section .data
 
@@ -487,23 +490,15 @@ jtable:
 
 buf:
     times IO_BUF_SIZE db 0x0 
-buf_end:
+
 balance:
     dq IO_BUF_SIZE
 
 dec_buf:
     times UINT64_MAX_LEN db 0x0
 
+gprintf_ret:
+    dq 0x0
+
 hex_table:
     db "0123456789abcdef"
-
-
-
-text:
-db "Hell "
-text_end:
-text_2:
-db "is with you, motherfucker!"
-text_2_end:
-
-
